@@ -1,49 +1,51 @@
 import path from 'path'
 import fs from 'fs'
 import webpack from 'webpack'
+import rimraf from 'rimraf'
 import config from '../config'
 import isomorphicWebpackConfig from '../webpack.isomorphic'
-import child_process from 'child_process'
-import _ from 'lodash'
-import I18nPlugin from 'i18n-webpack-plugin'
+const {SENTRY_DSN, CLIENT_DIST_PATH, JWT_SECRET, PORT, publicPath, BASE_API_SSR, API_PREFIX, isProduction} = config
 
-const exec = child_process.execSync
-const {
-	SENTRY_DSN,
-	DIST_PATH,
-	APP_LANGUAGE,
-	JWT_SECRET,
-	ANALYZE_BUNDLE,
-	PORT
-} = config
+// Clear dist dir before run
+rimraf(`${config.distPath}/server`, {}, () => {})
 
-// Cleare dist dir before run
-exec(`rm -rf ${config.distPath}/server/${APP_LANGUAGE}`)
+const chunkFilename = isProduction ? '[name].[chunkhash:6].js' : '[name].js'
+const devtool = isProduction ? 'cheap-source-map' : 'eval'
+const entry = isProduction
+	? path.join(config.srcPath, './server')
+	: path.join(config.srcPath, './server/server')
 
 const definePluginArgs = {
 	'process.env.BROWSER': JSON.stringify(false),
 	'process.env.PORT': JSON.stringify(PORT),
 	'process.env.JWT_SECRET': JSON.stringify(JWT_SECRET),
 	'process.env.SENTRY_DSN': JSON.stringify(SENTRY_DSN),
-	'process.env.DIST_PATH': JSON.stringify(DIST_PATH)
+	'process.env.CLIENT_DIST_PATH': JSON.stringify(CLIENT_DIST_PATH),
+	'process.env.BASE_API': JSON.stringify(BASE_API_SSR),
+	'process.env.API_PREFIX': JSON.stringify(API_PREFIX)
 }
 
 let nodeModules = {}
 fs
 	.readdirSync('node_modules')
-	.filter(function (x) {
+	.filter(x => {
 		return ['.bin'].indexOf(x) === -1
 	})
-	.forEach(function (mod) {
+	.forEach(mod => {
 		nodeModules[mod] = 'commonjs ' + mod
 	})
 
 const baseWebpackConfig = {
-	entry: [path.join(config.srcPath, './server/index')],
+	name: 'server',
+	entry,
+	devtool,
 	target: 'node',
 	output: {
-		path: path.join(config.distPath, './server', APP_LANGUAGE),
-		filename: 'index.js'
+		path: path.join(config.distPath, './server'),
+		filename: 'index.js',
+		chunkFilename,
+		publicPath,
+		libraryTarget: 'commonjs2'
 	},
 	externals: nodeModules,
 	performance: {
@@ -52,39 +54,13 @@ const baseWebpackConfig = {
 	resolve: {
 		extensions: isomorphicWebpackConfig.resolve.extensions,
 		modules: isomorphicWebpackConfig.resolve.modules,
-		alias: isomorphicWebpackConfig.resolve.alias
+		alias: {
+			...isomorphicWebpackConfig.resolve.alias,
+			locals: `${config.rootPath}/locals`
+		}
 	},
 	module: {
-		rules: isomorphicWebpackConfig.module.rules.concat([
-			// NOTE: LQIP loader doesn't work with file-loader and url-loader :(
-			// `npm i --save-dev lqip-loader`
-			// {
-			//   test: /\.(jpe?g|png)$/i,
-			//   enforce: 'pre',
-			//   loaders: [
-			//     {
-			//       loader: 'lqip-loader',
-			//       options: {
-			//         path: '/images-lqip', // your image going to be in media folder in the output dir
-			//         name: '[name]-lqip.[hash:8].[ext]' // you can use [hash].[ext] too if you wish
-			//       }
-			//     }
-			//   ]
-			// }
-			{
-				test: /\.(jpe?g|png|gif|svg)$/,
-				use: [
-					{
-						loader: 'url-loader',
-						options: {
-							limit: 25000,
-							name: 'images/[name].[hash:8].[ext]'
-						}
-					},
-					'img-loader'
-				]
-			}
-		])
+		rules: isomorphicWebpackConfig.module.rules
 	},
 	plugins: isomorphicWebpackConfig.plugins.concat([
 		new webpack.NormalModuleReplacementPlugin(

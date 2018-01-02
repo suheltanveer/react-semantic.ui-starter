@@ -1,28 +1,46 @@
-import React, {Component} from 'react'
-import PropTypes from 'prop-types'
-import {Switch, Redirect} from 'react-router-dom'
-import LazyLoad from 'components/addons/LazyLoad'
-
 /**
- * Returns application routing with protected by AuthCheck func routes
- * @desc This function returns JSX, so we can think about it as "stateless component"
- * @param {Function} authCheck checks is user logged in
+ * @flow
  */
-export default class RoutingWrapper extends Component {
-	static propTypes = {
-		routes: PropTypes.array,
-		store: PropTypes.object
-	}
+import React from 'react'
+import {connect} from 'react-redux'
+import {withRouter} from 'react-router'
+import {Switch} from 'react-router-dom'
+import {getAuthState} from 'selectors'
+import _ from 'lodash'
+import type {RouteItem} from 'types'
+
+type Props = {
+	routesToRender: RouteItem[],
+	routes: RouteItem[]
+}
+
+const RoutingWrapper = (props: Props) => {
+	const {routesToRender} = props
+	// render components that are inside Switch (main view)
+	const routesRendered = routesToRender.map((a: RouteItem, i) => {
+		// Get tag for Route.
+		const Tag = a.tag
+		return (
+			<Tag
+				key={i}
+				{..._.pick(a, 'component', 'path', 'exact', 'strict', 'to')}
+			/>
+		)
+	})
+
+	return <Switch>{routesRendered}</Switch>
+}
+
+function mapStateToProps (state, props) {
+	const {routes} = props
+	const {isLoggedIn} = getAuthState(state)
 
 	/**
-    * Checks Auth logic. Is user allowed to visit certain path?
-    * @param  {String} path next path to visit
-    * @return {Bool} is user allowed to visit next location?
-    * check RouteAuth component.
-    */
-	authCheck (path) {
-		const {store} = this.props
-		const {isLoggedIn} = store.getState().me.auth
+	 * Checks Auth logic. Is user allowed to visit certain path?
+	 * @param  {String} path next path to visit
+	 * @return {Bool} is user allowed to visit next location?
+	 */
+	const authCheck = ({path}): boolean => {
 		const authPath = '/auth'
 		const allowedToVisitPath = [authPath]
 
@@ -34,41 +52,14 @@ export default class RoutingWrapper extends Component {
 		return true
 	}
 
-	render () {
-		const {routes} = this.props
-		const onlyRoutes = routes.filter(
-			a => a.tag || a.component || a.lazy || !a.external
-		)
-		// render components that are inside Switch (main view)
-		const routesRendered = onlyRoutes.map((a, i) => {
-			// get tag for Route.
-			// is it "RouteAuth" `protected route` or "Route"?
-			const Tag = a.tag
-			const {path, exact, strict, component, lazy} = a
-			// can visitor access this route?
-			// this function determinates is user allowed to visit route
-			const canAccess = ::this.authCheck
-			// select only props that we need
-			const b = {path, exact, strict, canAccess}
+	const onlyRealRoutes = routes.filter(a => a.component)
+	const onlyAllowedRealRoutes = onlyRealRoutes.filter(authCheck)
+	const onlyRedirects = routes.filter(a => a.to)
+	const routesToRender = onlyAllowedRealRoutes.concat(onlyRedirects)
 
-			if (lazy) {
-				const routeToRenderLazy = (
-					<Tag {...b} key={i}>
-						<LazyLoad component={component} />
-					</Tag>
-				)
-				return routeToRenderLazy
-			}
-
-			// it can be Route or RouteAuth
-			return <Tag key={i} {...b} component={component} />
-		})
-
-		return (
-			<Switch>
-				{routesRendered}
-				<Redirect to="/" />
-			</Switch>
-		)
+	return {
+		routesToRender
 	}
 }
+
+export default connect(mapStateToProps)(withRouter(RoutingWrapper))

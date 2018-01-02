@@ -1,44 +1,44 @@
+// @flow
 import {
-	UI_OPEN_SIDEBAR,
-	UI_CLOSE_SIDEBAR,
-	UI_WINDOW_RESIZE,
-	LOCATION_CHANGE,
-	APPLICATION_INIT
-} from 'actions'
+	UI_TOGGLE_SIDEBAR,
+	UI_WINDOW_RESIZE
+} from 'actions/layout'
+import {LOCATION_CHANGE} from 'actions/common'
+import type {LOCATION_CHANGE_TYPE} from 'actions/common'
+import type {
+	UI_TOGGLE_SIDEBAR_TYPE,
+	UI_WINDOW_RESIZE_TYPE
+} from 'actions/layout'
 
-export const initialState = {
-	sidebarOpened: false,
-	isMobile: false,
-	isMobileXS: false,
-	isMobileSM: false
+export type State = {
+	sidebarOpened: boolean,
+	innerWidth?: number
 }
 
-export function layout (state = initialState, action) {
-	const computeMobileStatuses = () => {
-		const innerWidth = process.env.BROWSER ? window.innerWidth : 1024
-		const isMobile = innerWidth < 1025 // 1024px - is the main breakpoint in UI
-		const isMobileXS = innerWidth < 481
-		const isMobileSM = innerWidth > 480 && innerWidth < 767
-		return {isMobileSM, isMobileXS, isMobile}
-	}
+type Action =
+	| UI_TOGGLE_SIDEBAR_TYPE
+	| UI_WINDOW_RESIZE_TYPE
+	| LOCATION_CHANGE_TYPE
+
+export const initialState: State = {
+	sidebarOpened: false
+}
+
+export function layout (state: State = initialState, action: Action): State {
 	switch (action.type) {
-	case APPLICATION_INIT:
 	case UI_WINDOW_RESIZE: {
-		const {isMobile, isMobileSM, isMobileXS} = computeMobileStatuses()
+		const {innerWidth} = action.payload
 		return {
 			...state,
-			isMobile,
-			isMobileSM,
-			isMobileXS
+			innerWidth
 		}
 	}
-	case UI_OPEN_SIDEBAR:
+	case UI_TOGGLE_SIDEBAR:
 		return {
 			...state,
-			sidebarOpened: true
+			sidebarOpened: !state.sidebarOpened
 		}
 	case LOCATION_CHANGE:
-	case UI_CLOSE_SIDEBAR:
 		return {
 			...state,
 			sidebarOpened: false

@@ -1,37 +1,30 @@
-import React, {Component} from 'react'
-import {connect} from 'react-redux'
-import PropTypes from 'prop-types'
-import {LOGIN_AUTH, LOGIN_AUTH_PENDING} from 'actions'
-import LoginComponent from './components'
+// @flow
+import React from 'react'
+import LoginForm from './components/LoginForm'
+import {Helmet} from 'react-helmet'
+import {Grid} from 'semantic-ui-react'
 
-class Login extends Component {
-	static propTypes = {
-		login: PropTypes.func.isRequired,
-		errors: PropTypes.object.isRequired
-	}
-
-	render () {
-		const {login, errors} = this.props
-		const props = {login, errors}
-		return <LoginComponent {...props} />
-	}
+const Login = ({login, errors}: Props) => {
+	return (
+		<Grid
+			verticalAlign="middle"
+			centered
+			columns={1}
+			textAlign="center"
+			relaxed
+			stretched
+			style={{flexGrow: 1}}
+		>
+			<Helmet>
+				<title>Suicrux:Login</title>
+			</Helmet>
+			<Grid.Row>
+				<Grid.Column tablet={10} mobile={16} computer={6}>
+					<LoginForm />
+				</Grid.Column>
+			</Grid.Row>
+		</Grid>
+	)
 }
 
-function mapStateToProps (state) {
-	const {errors} = state.me.auth
-	return {
-		errors
-	}
-}
-
-function mapDispatchToProps (dispatch) {
-	return {
-		login: async data => {
-			dispatch({type: LOGIN_AUTH_PENDING})
-			const result = await LOGIN_AUTH(data)
-			return dispatch(result)
-		}
-	}
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(Login)
+export default Login

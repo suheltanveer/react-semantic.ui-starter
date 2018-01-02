@@ -1,18 +1,27 @@
+// @flow
 import {combineReducers} from 'redux'
 import {routerReducer} from 'react-router-redux'
+import {reducer as reduxFormReducer} from 'redux-form'
+
+import type {State as AuthState} from 'reducers/auth'
+import type {State as LayoutState} from 'reducers/layout'
+import type {State as EntitiesLinksState} from 'reducers/links'
 
 import {layout} from './layout'
-import {posts} from './posts'
-import {users} from './users'
+import {links} from './links'
 import {auth} from './auth'
 
 // Root reducer
 export default combineReducers({
 	layout,
-	me: combineReducers({auth}),
+	auth,
 	entities: combineReducers({
-		posts,
-		users
+		links
 	}),
-	routing: routerReducer
+	routing: routerReducer,
+	form: reduxFormReducer
 })
+
+export type GlobalState = {layout: LayoutState} & {auth: AuthState} & {
+		entities: {links: EntitiesLinksState}
+	}

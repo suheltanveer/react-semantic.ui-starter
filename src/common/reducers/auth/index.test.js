@@ -1,8 +1,11 @@
-/* eslint-disable */
 // Import `auth` reducer and initialState for this
 import {auth as reducer, initialState} from 'reducers/auth'
 // Import all actions
-import * as actions from 'actions'
+import {
+	LOGIN_AUTH_SUCCESS,
+	LOGIN_AUTH_FAIL,
+	LOGOUT_AUTH_SUCCESS
+} from 'actions/auth'
 
 describe('AUTH REDUCER', () => {
 	// Does reducer return `initialState` on empty action type?
@@ -10,65 +13,50 @@ describe('AUTH REDUCER', () => {
 		expect(reducer(undefined, {x: 'string'})).toEqual(initialState)
 	})
 
+	const loggedInState = {
+		...initialState,
+		isLoggedIn: true
+	}
 	// Create test actions for our reducer.
 
-	const LOGOUT_AUTH_SUCCESS = {
-		type: actions.LOGOUT_AUTH_SUCCESS
+	const logoutSuccess = {
+		type: LOGOUT_AUTH_SUCCESS
 	}
 
-	const LOGIN_AUTH_FAIL = {
-		type: actions.LOGIN_AUTH_FAIL,
-		errors: {
-			hmmThatsAnError: {
-				xxx: 1
-			}
-		}
-	}
-
-	const LOGIN_AUTH_SUCCESS = {
-		type: actions.LOGIN_AUTH_SUCCESS,
-		result: {
-			token: 'iamnotatoken'
-		}
-	}
-
-	it('should handle LOGOUT_AUTH_SUCCESS', () => {
+	it('should handle LOGOUT_AUTH_SUCCESS if already logged in', () => {
 		// User is logged out after LOGOUT_AUTH_SUCCESS
-		expect(
-			reducer(
-				{
-					...initialState,
-					isLoggedIn: true,
-					token: 'iamnotatoken'
-				},
-				LOGOUT_AUTH_SUCCESS
-			)
-		).toEqual({
-			token: null,
-			errors: {},
+		expect(reducer(loggedInState, logoutSuccess)).toEqual({
+			...loggedInState,
 			isLoggedIn: false
 		})
 	})
 
-	it('should handle LOGIN_AUTH_FAIL', () => {
-		// User is logged out and has `errors` after LOGIN_AUTH_FAIL
-		expect(reducer(initialState, LOGIN_AUTH_FAIL)).toEqual({
-			...initialState,
-			isLoggedIn: false,
-			token: null,
-			errors: {
-				hmmThatsAnError: {
-					xxx: 1
+	it('should handle LOGIN_AUTH_FAIL if not logged in', () => {
+		const action = {
+			type: LOGIN_AUTH_FAIL,
+			payload: {
+				errors: {
+					hello: 'world'
 				}
 			}
+		}
+		// User is logged out and has `errors` after LOGIN_AUTH_FAIL
+		expect(reducer(initialState, action)).toEqual({
+			...initialState,
+			isLoggedIn: false
 		})
 	})
 
-	it('should handle LOGIN_AUTH_SUCCESS', () => {
+	it('should handle LOGIN_AUTH_SUCCESS if not logged in', () => {
+		const action = {
+			type: LOGIN_AUTH_SUCCESS,
+			payload: {
+				token: 'iamnotatoken'
+			}
+		}
 		// User is logged in and has `token` after LOGIN_AUTH_SUCCESS
-		expect(reducer(initialState, LOGIN_AUTH_SUCCESS)).toEqual({
+		expect(reducer(initialState, action)).toEqual({
 			...initialState,
-			token: 'iamnotatoken',
 			isLoggedIn: true
 		})
 	})
